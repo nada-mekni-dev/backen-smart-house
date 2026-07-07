@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Domotique Intelligente</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+    :root {
+      --bg:        #0b0e14;
+      --surface:   #131720;
+      --surface2:  #1a2030;
+      --border:    #1e2740;
+      --accent:    #4f8ef7;
+      --accent2:   #6c63ff;
+      --green:     #22d3a5;
+      --warn:      #f59e42;
+      --danger:    #f06060;
+      --yellow:    #f5c542;
+      --text:      #e8edf5;
+      --muted:     #5c6b85;
+      --muted2:    #8899aa;
+      --radius:    14px;
+      --radius-sm: 8px;
+      --mono:      'JetBrains Mono', monospace;
+      --sans:      'Inter', system-ui, sans-serif;
+      --sidebar-w: 0px;
+      --shadow:    0 4px 24px rgba(0,0,0,0.35);
+    }
+
+    body.light {
+      --bg:       #f0f4fb;
+      --surface:  #ffffff;
+      --surface2: #e8edf7;
+      --border:   #d0daea;
+      --text:     #1a2236;
+      --muted:    #7888a0;
+      --muted2:   #9aabb8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      display: flex;
+    }
+
+    /* ── Sidebar (visible only on small screens) ── */
+    .sidebar {
+      display: none;
+      width: var(--sidebar-w);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      flex-direction: column;
+      align-items: center;
+      padding: 1.2rem 0;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 100;
+      gap: 0.4rem;
+    }
+    .sidebar-logo {
+      font-size: 1.5rem;
+      margin-bottom: 1.2rem;
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .nav-item {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 3px;
+      cursor: pointer;
+      transition: background 0.2s;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-family: var(--sans);
+    }
+    .nav-item:hover { background: var(--surface2); color: var(--muted2); }
+    .nav-item.active {
+      background: linear-gradient(135deg, rgba(79,142,247,0.2), rgba(108,99,255,0.2));
+      color: var(--accent);
+    }
+    .nav-item svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .sidebar-bottom { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 0.6rem; }
+
+    /* ── Main layout ── */
+    .app {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.9rem 1.8rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .header-left { display: flex; flex-direction: column; }
+    .header-title { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.02em; }
+    .header-sub { font-size: 0.72rem; color: var(--muted); margin-top: 1px; }
+    .header-right { display: flex; align-items: center; gap: 1rem; }
+
+    .server-bar {
+      display: flex; align-items: center; gap: 0.5rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.35rem 0.7rem;
+      font-size: 0.75rem;
+    }
+    .server-bar input {
+      background: transparent; border: none; outline: none;
+      color: var(--text); font-family: var(--mono); font-size: 0.73rem; width: 180px;
+    }
+    .server-bar input::placeholder { color: var(--muted); }
+    .btn-connect {
+      background: var(--accent); color: #fff; border: none;
+      border-radius: 6px; padding: 0.25rem 0.7rem;
+      font-size: 0.72rem; font-weight: 600; cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn-connect:hover { opacity: 0.85; }
+
+    .status-pill {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.72rem; color: var(--muted);
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; flex-shrink: 0; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+    /* Theme toggle */
+    .theme-toggle-wrap { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; }
+    .theme-toggle {
+      position: relative; width: 52px; height: 26px;
+    }
+    .theme-toggle input { opacity: 0; width: 0; height: 0; }
+    .theme-slider {
+      position: absolute; inset: 0;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 999px; cursor: pointer; transition: background 0.3s;
+      display: flex; align-items: center;
+    }
+    .theme-slider::before {
+      content: '';
+      position: absolute; left: 3px;
+      width: 20px; height: 20px;
+      background: var(--accent);
+      border-radius: 50%; transition: transform 0.3s;
+    }
+    .theme-toggle input:checked + .theme-slider::before { transform: translateX(26px); }
+    .theme-toggle input:checked + .theme-slider { background: var(--surface2); }
+
+    /* ── Content ── */
+    .content {
+      padding: 1.4rem 1.8rem;
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      grid-template-areas:
+        "metrics   metrics"
+        "chart     devices"
+        "chat      analysis";
+      gap: 1.2rem;
+      flex: 1;
+      align-items: stretch;
+    }
+
+    /* ── Metric cards ── */
+    .metrics {
+      grid-area: metrics;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+    }
+    .metric-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.2rem 1.3rem;
+      display: flex; flex-direction: column; gap: 0.3rem;
+      position: relative; overflow: hidden;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .metric-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+    .metric-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .metric-card.temp::before  { background: linear-gradient(90deg, var(--warn), #ffb347); }
+    .metric-card.hum::before   { background: linear-gradient(90deg, var(--accent), #7ec8ff); }
+    .metric-card.light::before { background: linear-gradient(90deg, var(--yellow), #ffe066); }
+    .metric-card.pres::before  { background: linear-gradient(90deg, var(--green), #5ff5c0); }
+
+    .metric-top { display: flex; align-items: center; justify-content: space-between; }
+    .metric-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+    }
+    .metric-icon.temp  { background: rgba(245,158,66,0.15); }
+    .metric-icon.hum   { background: rgba(79,142,247,0.15); }
+    .metric-icon.light { background: rgba(245,197,66,0.15); }
+    .metric-icon.pres  { background: rgba(34,211,165,0.15); }
+
+    .metric-sparkline { height: 36px; width: 80px; }
+    .metric-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 0.4rem; }
+    .metric-value { font-family: var(--mono); font-size: 1.8rem; font-weight: 700; line-height: 1.1; }
+    .metric-value.temp  { color: var(--warn); }
+    .metric-value.hum   { color: var(--accent); }
+    .metric-value.light { color: var(--yellow); }
+    .metric-value.pres  { color: var(--green); }
+    .metric-sub { font-size: 0.68rem; color: var(--muted); }
+
+    /* ── Card base ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.2rem 1.4rem;
+    }
+    .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .card-title {
+      font-size: 0.72rem; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--muted); font-weight: 600;
+    }
+    .card-action {
+      font-size: 0.72rem; color: var(--accent); cursor: pointer;
+      background: none; border: none; font-family: var(--sans); font-weight: 500;
+    }
+    .card-action:hover { opacity: 0.75; }
+
+    /* ── Chart ── */
+    .chart-card { grid-area: chart; display: flex; flex-direction: column; }
+    .chart-card .chart-wrap { flex: 1; min-height: 180px; }
+    .chart-tabs { display: flex; gap: 0.4rem; margin-bottom: 0.8rem; }
+    .chart-tab {
+      font-size: 0.72rem; padding: 0.25rem 0.65rem; border-radius: 6px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--muted); cursor: pointer; font-family: var(--sans);
+      transition: all 0.2s;
+    }
+    .chart-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .chart-wrap { position: relative; height: 200px; }
+
+    /* ── Right panel ── */
+    .devices-card  { grid-area: devices; display: flex; flex-direction: column; }
+    .devices-card .device-list { flex: 1; }
+    .analysis-card { grid-area: analysis; display: flex; flex-direction: column; }
+    .analysis-card #analysisContent { flex: 0; }
+
+    /* ── Devices ── */
+    .device-list { display: flex; flex-direction: column; gap: 0.5rem; }
+    .device-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.65rem 0.85rem;
+      background: var(--surface2); border: 1px solid transparent;
+      border-radius: var(--radius-sm); transition: border-color 0.2s;
+    }
+    .device-item.active { border-color: rgba(34,211,165,0.3); }
+    .device-left { display: flex; align-items: center; gap: 0.6rem; }
+    .device-icon {
+      width: 30px; height: 30px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; font-size: 0.9rem;
+    }
+    .device-icon.on  { background: rgba(34,211,165,0.15); }
+    .device-icon.off { background: var(--bg); }
+    .device-name { font-size: 0.82rem; font-weight: 500; }
+    .device-state { font-size: 0.66rem; color: var(--muted); }
+
+    .toggle {
+      width: 40px; height: 22px; background: var(--border);
+      border-radius: 999px; position: relative;
+      cursor: pointer; border: none; transition: background 0.25s;
+      flex-shrink: 0;
+    }
+    .toggle.on { background: var(--green); }
+    .toggle::after {
+      content: ''; position: absolute; top: 3px; left: 3px;
+      width: 16px; height: 16px; background: white;
+      border-radius: 50%; transition: transform 0.25s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }
+    .toggle.on::after { transform: translateX(18px); }
+
+    /* ── ThingSpeak bridge badge ── */
+    .ts-badge {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      font-size: 0.62rem; color: var(--yellow);
+      background: rgba(245,197,66,0.1); border: 1px solid rgba(245,197,66,0.25);
+      border-radius: 4px; padding: 0.1rem 0.4rem;
+      margin-left: 0.4rem; vertical-align: middle;
+    }
+    .ts-dot {
+      width: 5px; height: 5px; border-radius: 50%; background: var(--yellow);
+      animation: pulse 2s infinite;
+    }
+
+    /* ── Analysis ── */
+    .analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.7rem; }
+    .analysis-stat {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 0.55rem 0.75rem;
+    }
+    .analysis-stat-label { font-size: 0.66rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .analysis-stat-value { font-family: var(--mono); font-size: 1.05rem; font-weight: 700; color: var(--accent); margin-top: 0.15rem; }
+    .insight-box {
+      background: var(--surface2); border: 1px solid var(--accent);
+      border-radius: var(--radius-sm); padding: 0.7rem 0.9rem;
+      font-size: 0.8rem; line-height: 1.55;
+      display: flex; gap: 0.6rem;
+    }
+    .insight-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+    .btn-refresh {
+      background: transparent; border: 1px solid var(--border); color: var(--muted2);
+      border-radius: 6px; padding: 0.22rem 0.65rem; font-size: 0.7rem;
+      cursor: pointer; transition: border-color 0.2s; font-family: var(--sans);
+      display: flex; align-items: center; gap: 0.3rem;
+    }
+    .btn-refresh:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Chat ── */
+    .chat-card { grid-area: chat; display: flex; flex-direction: column; }
+    .chat-card .chat-messages { flex: 1; max-height: 420px; min-height: 280px; }
+    .chat-messages {
+      height: 220px; overflow-y: auto; display: flex; flex-direction: column;
+      gap: 0.55rem; margin-bottom: 0.8rem; padding-right: 0.2rem;
+    }
+    .chat-messages::-webkit-scrollbar { width: 3px; }
+    .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .msg { padding: 0.5rem 0.75rem; border-radius: 10px; font-size: 0.82rem; line-height: 1.5; max-width: 85%; }
+    .msg.user {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff; align-self: flex-end; font-weight: 500;
+    }
+    .msg.bot  { background: var(--surface2); border: 1px solid var(--border); color: var(--text); align-self: flex-start; }
+    .msg.bot.error { border-color: var(--danger); color: var(--danger); }
+    .msg-time { font-size: 0.62rem; color: rgba(255,255,255,0.5); margin-top: 0.2rem; }
+    .msg.bot .msg-time { color: var(--muted); }
+    .chat-input-row { display: flex; gap: 0.6rem; }
+    .chat-input {
+      flex: 1; background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius-sm); padding: 0.6rem 0.9rem;
+      font-size: 0.83rem; font-family: var(--sans); outline: none;
+      transition: border-color 0.2s;
+    }
+    .chat-input:focus { border-color: var(--accent); }
+    .chat-input::placeholder { color: var(--muted); }
+    .btn-send {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff; border: none; border-radius: var(--radius-sm);
+      padding: 0.6rem 1rem; cursor: pointer; transition: opacity 0.2s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .btn-send:hover { opacity: 0.85; }
+    .btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-send svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    .chat-tools { display: flex; align-items: center; justify-content: flex-end; margin-bottom: 0.5rem; }
+    .chat-clear { background: transparent; border: none; color: var(--muted); font-size: 0.72rem; cursor: pointer; display: flex; align-items: center; gap: 0.3rem; font-family: var(--sans); }
+    .chat-clear:hover { color: var(--danger); }
+
+    /* ── Footer ── */
+    footer {
+      padding: 0.7rem 1.8rem;
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 0.7rem; color: var(--muted);
+      background: var(--surface);
+    }
+    .footer-brand { color: var(--accent); font-weight: 600; }
+    #connStatus { display: flex; align-items: center; gap: 0.4rem; }
+
+    /* ── Responsive ── */
+    @media (max-width: 960px) {
+      :root { --sidebar-w: 0px; }
+      .sidebar {
+        display: flex;
+        width: 100%; height: 56px; flex-direction: row;
+        position: fixed; top: auto; bottom: 0; left: 0; right: 0;
+        border-right: none; border-top: 1px solid var(--border);
+        padding: 0 0.5rem; justify-content: space-around; z-index: 200;
+      }
+      .sidebar-logo { display: none; }
+      .sidebar-bottom { margin-top: 0; flex-direction: row; }
+      .nav-item { font-size: 0.45rem; width: 48px; height: 48px; }
+      .app { margin-left: 0; padding-bottom: 56px; }
+      header { flex-wrap: wrap; gap: 0.6rem; padding: 0.75rem 1rem; }
+      .header-right { width: 100%; flex-wrap: wrap; gap: 0.5rem; }
+      .server-bar { flex: 1; min-width: 0; }
+      .server-bar input { width: 100%; min-width: 0; }
+      .content {
+        padding: 1rem; grid-template-columns: 1fr;
+        grid-template-areas: "metrics" "chart" "devices" "chat" "analysis";
+      }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+      .chart-card .chart-wrap { min-height: 200px; }
+      .chat-card .chat-messages { max-height: 380px; }
+    }
+    @media (max-width: 480px) {
+      .metrics { grid-template-columns: 1fr 1fr; }
+      .metric-value { font-size: 1.5rem; }
+      .header-title { font-size: 0.95rem; }
+      .theme-toggle-wrap { font-size: 0.7rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo">🏠</div>
+  <button class="nav-item active" title="Dashboard" onclick="navigateTo('section-dashboard', this)">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Dashboard
+  </button>
+  <button class="nav-item" title="Équipements" onclick="navigateTo('section-equipements', this)">
+    <svg viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>
+    Équipements
+  </button>
+  <button class="nav-item" title="Analyse" onclick="navigateTo('section-analyse', this)">
+    <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Analyse
+  </button>
+  <button class="nav-item" title="Assistant IA" onclick="navigateTo('section-assistant', this)">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M12 14c-6 0-8 2-8 3v1h16v-1c0-1-2-3-8-3z"/></svg>
+    Assistant IA
+  </button>
+  <button class="nav-item" title="Historique" onclick="navigateTo('section-historique', this)">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+    Historique
+  </button>
+</nav>
+
+<!-- App -->
+<div class="app">
+  <header>
+    <div class="header-left">
+      <div class="header-title">Domotique Intelligente</div>
+      <div class="header-sub" id="headerDate">Chargement…</div>
+    </div>
+    <div class="header-right">
+      <div class="server-bar">
+        ⚙️
+        <input id="serverUrl" type="text" value="https://vascular-goon-fool.ngrok-free.dev" placeholder="URL du serveur FastAPI" />
+        <button class="btn-connect" onclick="saveServer()">Connecter</button>
+      </div>
+      <div class="theme-toggle-wrap">
+        ☀️
+        <label class="theme-toggle">
+          <input type="checkbox" id="themeToggle" onchange="toggleTheme()">
+          <span class="theme-slider"></span>
+        </label>
+        🌙
+      </div>
+      <div class="status-pill">
+        <div class="dot"></div>
+        <span>Système actif</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- Metrics -->
+    <div class="metrics" id="section-dashboard">
+      <div class="metric-card temp">
+        <div class="metric-top">
+          <div class="metric-icon temp">🌡️</div>
+          <canvas class="metric-sparkline" id="spark-temp"></canvas>
+        </div>
+        <div class="metric-label">Température</div>
+        <div class="metric-value temp" id="val-temp">–</div>
+        <div class="metric-sub">°C · DHT22</div>
+      </div>
+      <div class="metric-card hum">
+        <div class="metric-top">
+          <div class="metric-icon hum">💧</div>
+          <canvas class="metric-sparkline" id="spark-hum"></canvas>
+        </div>
+        <div class="metric-label">Humidité</div>
+        <div class="metric-value hum" id="val-hum">–</div>
+        <div class="metric-sub">% · DHT22</div>
+      </div>
+      <div class="metric-card light">
+        <div class="metric-top">
+          <div class="metric-icon light">☀️</div>
+          <canvas class="metric-sparkline" id="spark-light"></canvas>
+        </div>
+        <div class="metric-label">Luminosité</div>
+        <div class="metric-value light" id="val-light">–</div>
+        <div class="metric-sub">% · Potentiomètre</div>
+      </div>
+      <div class="metric-card pres">
+        <div class="metric-top">
+          <div class="metric-icon pres">👤</div>
+          <div style="display:flex;gap:3px;align-items:flex-end;height:36px;padding-bottom:4px;" id="pres-bars">
+            <div style="width:4px;background:var(--border);border-radius:2px;height:30%;"></div>
+            <div style="width:4px;background:var(--border);border-radius:2px;height:50%;"></div>
+            <div style="width:4px;background:var(--border);border-radius:2px;height:70%;"></div>
+            <div style="width:4px;background:var(--border);border-radius:2px;height:45%;"></div>
+            <div style="width:4px;background:var(--border);border-radius:2px;height:90%;"></div>
+            <div style="width:4px;background:var(--border);border-radius:2px;height:60%;"></div>
+            <div style="width:4px;background:var(--border);border-radius:2px;height:35%;"></div>
+          </div>
+        </div>
+        <div class="metric-label">Présence</div>
+        <div class="metric-value pres" id="val-pres">–</div>
+        <div class="metric-sub">PIR</div>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="card chart-card" id="section-historique">
+      <div class="card-header">
+        <div class="card-title">Historique — 50 dernières mesures</div>
+        <div class="chart-tabs">
+          <button class="chart-tab active">50 dernières</button>
+          <button class="chart-tab">1h</button>
+          <button class="chart-tab">24h</button>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="sensorChart"></canvas></div>
+    </div>
+
+    <!-- Devices -->
+    <div class="card devices-card" id="section-equipements">
+      <div class="card-header">
+        <div class="card-title">
+          Équipements
+          <span class="ts-badge"><span class="ts-dot"></span>ThingSpeak</span>
+        </div>
+        <button class="card-action">Voir tout</button>
+      </div>
+      <div class="device-list" id="deviceList">
+        <div style="color:var(--muted);font-size:0.82rem;">Chargement…</div>
+      </div>
+    </div>
+
+    <!-- Analysis -->
+    <div class="card analysis-card" id="section-analyse">
+      <div class="card-header">
+        <div class="card-title">Analyse de consommation</div>
+        <button class="btn-refresh" onclick="fetchAnalysis()">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap: round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          Actualiser
+        </button>
+      </div>
+      <div id="analysisContent">
+        <div style="color:var(--muted);font-size:0.82rem;">Chargement…</div>
+      </div>
+    </div>
+
+    <!-- Chat -->
+    <div class="card chat-card" id="section-assistant">
+      <div class="card-header">
+        <div class="card-title">Assistant IA — Commandes vocales</div>
+        <button class="chat-clear" onclick="clearChat()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+          Effacer
+        </button>
+      </div>
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-input-row">
+        <input class="chat-input" id="chatInput" type="text"
+          placeholder="Ex: Allume la lumière du salon…"
+          onkeydown="if(event.key==='Enter') sendCommand()" />
+        <button class="btn-send" id="btnSend" onclick="sendCommand()">
+          <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    <span>© 2025 <span class="footer-brand">Domotique Intelligente</span></span>
+    <span id="connStatus">–</span>
+  </footer>
+</div>
+
+<script>
+  // ── Navigation sidebar ──
+  function navigateTo(sectionId, btn) {
+    const el = document.getElementById(sectionId);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+  }
+
+  // ============================================================
+  //  THINGSPEAK CONFIG — Remplace ces 3 valeurs !
+  // ============================================================
+  const TS_CHANNEL_ID   = "3412304";    // ex: "2345678"
+  const TS_READ_API_KEY = "9ZS0RJBJ4JR3ZS4R";   // ex: "ABCDEF123456"
+  const TS_WRITE_API_KEY = "8FQ8R51WPPDDYFUE";   // ta clé WRITE (déjà dans le sketch)
+  // field5=salon, field6=chambre, field7=cuisine
+  // ============================================================
+
+  // États LED en mémoire (pour écrire les 3 champs ensemble)
+  const tsLedState = { light_salon: false, light_bedroom: false, light_kitchen: false };
+
+  // Timestamp du dernier envoi ThingSpeak (limite : 1 écriture / 15s)
+  let tsLastWrite = 0;
+
+  // Cache des dernières valeurs capteurs connues (pour les inclure avec chaque écriture LED)
+  const tsLastSensors = { f1: null, f2: null, f3: null, f4: null };
+
+  // Appelé par applySensorUI() pour mettre à jour le cache capteurs
+  function updateSensorCache(temp, hum, pres, light) {
+    if (temp  !== undefined && !isNaN(temp))   tsLastSensors.f1 = temp.toFixed(1);
+    if (hum   !== undefined && !isNaN(hum))    tsLastSensors.f2 = hum.toFixed(1);
+    if (pres  !== undefined)                   tsLastSensors.f3 = pres ? "1" : "0";
+    if (light !== undefined && !isNaN(light))  tsLastSensors.f4 = String(light);
+  }
+
+  // Écrit LEDs (field5/6/7) + dernières valeurs capteurs (field1-4) dans le même POST
+  // → aucune entrée avec champs vides dans ThingSpeak
+  async function tsWriteLeds() {
+    const now = Date.now();
+    const elapsed = now - tsLastWrite;
+    if (elapsed < 15000 && tsLastWrite !== 0) {
+      const wait = Math.ceil((15000 - elapsed) / 1000);
+      console.warn(`[ThingSpeak] Trop tôt — attend encore ${wait}s`);
+      showTsStatus(`⏳ Envoi dans ${wait}s…`, 'warn');
+      setTimeout(tsWriteLeds, 15000 - elapsed);
+      return;
+    }
+
+    const f5 = tsLedState.light_salon   ? "1" : "0";
+    const f6 = tsLedState.light_bedroom ? "1" : "0";
+    const f7 = tsLedState.light_kitchen ? "1" : "0";
+
+    // Construit l'URL avec field1-4 (capteurs) + field5-7 (LEDs)
+    // Si les capteurs ne sont pas encore connus, on envoie quand même field5-7 seuls
+    let url = `https://api.thingspeak.com/update?api_key=${TS_WRITE_API_KEY}&field5=${f5}&field6=${f6}&field7=${f7}`;
+    if (tsLastSensors.f1 !== null) url += `&field1=${tsLastSensors.f1}&field2=${tsLastSensors.f2}&field3=${tsLastSensors.f3}&field4=${tsLastSensors.f4}`;
+
+    try {
+      const res     = await fetch(url);
+      const text    = await res.text();
+      const entryId = parseInt(text.trim());
+
+      if (entryId > 0) {
+        tsLastWrite = Date.now();
+        console.log(`[ThingSpeak] ✅ Écrit — entry #${entryId} | T:${tsLastSensors.f1} H:${tsLastSensors.f2} P:${tsLastSensors.f3} L:${tsLastSensors.f4} | salon:${f5} chambre:${f6} cuisine:${f7}`);
+        showTsStatus(`✅ Envoyé (entry #${entryId})`, 'ok');
+      } else {
+        console.warn(`[ThingSpeak] ⚠️ Réponse: "${text}" — rate limit ou clé invalide`);
+        showTsStatus('⚠️ ThingSpeak : rate limit (15s)', 'warn');
+      }
+    } catch(e) {
+      console.error("[ThingSpeak] ❌ Erreur réseau:", e);
+      showTsStatus('❌ Erreur réseau ThingSpeak', 'err');
+    }
+  }
+
+  // Affiche un statut temporaire sous la carte Équipements
+  function showTsStatus(msg, type) {
+    let el = document.getElementById('ts-status');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'ts-status';
+      el.style.cssText = 'font-size:0.68rem;padding:0.3rem 0.5rem;border-radius:5px;margin-top:0.5rem;transition:opacity 0.5s';
+      document.getElementById('deviceList').after(el);
+    }
+    const colors = { ok: '#22d3a5', warn: '#f5c542', err: '#f06060' };
+    el.style.color   = colors[type] || '#888';
+    el.style.opacity = '1';
+    el.textContent   = msg;
+    clearTimeout(el._timer);
+    el._timer = setTimeout(() => { el.style.opacity = '0'; }, 4000);
+  }
+
+  // Lit les états LED depuis ThingSpeak (field5/6/7) → retourne un objet {light_salon, light_bedroom, light_kitchen}
+  async function tsReadLeds() {
+    try {
+      const res = await fetch(
+        `https://api.thingspeak.com/channels/${TS_CHANNEL_ID}/feeds/last.json?api_key=${TS_READ_API_KEY}`
+      );
+      const data = await res.json();
+      console.log("[ThingSpeak] Lecture LEDs →", data.field5, data.field6, data.field7);
+      return {
+        light_salon:   (data.field5 ?? "0") === "1",
+        light_bedroom: (data.field6 ?? "0") === "1",
+        light_kitchen: (data.field7 ?? "0") === "1"
+      };
+    } catch(e) {
+      console.error("[ThingSpeak] Erreur lecture:", e);
+      return null;
+    }
+  }
+
+  // ── Date header ──
+  function updateDate() {
+    const now = new Date();
+    document.getElementById('headerDate').textContent =
+      now.toLocaleDateString('fr', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  }
+  updateDate();
+
+// ── Config ──
+const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+let SERVER = localStorage.getItem('domServer') || 
+             (isLocalhost 
+               ? 'http://localhost:8000'
+               : 'https://vascular-goon-fool.ngrok-free.dev');
+
+document.getElementById('serverUrl').value = SERVER;
+
+function saveServer() {
+  SERVER = document.getElementById('serverUrl').value.trim().replace(/\/$/, '');
+  localStorage.setItem('domServer', SERVER);
+  fetchAll();
+}
+
+  // ── Theme ──
+  function toggleTheme() {
+    const isLight = document.getElementById("themeToggle").checked;
+    document.body.classList.toggle('light', isLight);
+    localStorage.setItem("theme", isLight ? "light" : "dark");
+  }
+  if (localStorage.getItem("theme") === "light") {
+    document.body.classList.add('light');
+    document.getElementById("themeToggle").checked = true;
+  }
+
+  // ── Chat history ──
+  const CHAT_KEY = 'domotique_chat_v2';
+  function loadChatHistory() { try { return JSON.parse(localStorage.getItem(CHAT_KEY) || '[]'); } catch { return []; } }
+  function saveChatHistory(h) { try { localStorage.setItem(CHAT_KEY, JSON.stringify(h.slice(-50))); } catch {} }
+  function clearChat() {
+    localStorage.removeItem(CHAT_KEY);
+    document.getElementById('chatMessages').innerHTML =
+      '<div class="msg bot">💬 Historique effacé. Comment puis-je vous aider ?</div>';
+  }
+  function formatTime(iso) { try { return new Date(iso).toLocaleTimeString('fr', {hour:'2-digit',minute:'2-digit'}); } catch { return ''; } }
+
+  function renderChatHistory() {
+    const box = document.getElementById('chatMessages');
+    const history = loadChatHistory();
+    if (history.length === 0) {
+      box.innerHTML = '<div class="msg bot">👋 Bonjour ! Dis-moi quoi faire, ex : <em>"Éteins la lumière du salon"</em></div>';
+      return;
+    }
+    box.innerHTML = '';
+    history.forEach(msg => {
+      const div = document.createElement('div');
+      div.className = `msg ${msg.role}`;
+      div.innerHTML = `${msg.text}<div class="msg-time">${formatTime(msg.time)}</div>`;
+      box.appendChild(div);
+    });
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function addMsg(role, text, isError = false) {
+    const box = document.getElementById('chatMessages');
+    const time = new Date().toISOString();
+    const history = loadChatHistory();
+    history.push({ role, text, time });
+    saveChatHistory(history);
+    const div = document.createElement('div');
+    div.className = `msg ${role}${isError ? ' error' : ''}`;
+    div.innerHTML = `${text}<div class="msg-time">${formatTime(time)}</div>`;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  // ── Sparklines ──
+  const sparklines = {};
+  function initSparkline(id, color) {
+    const ctx = document.getElementById(id).getContext('2d');
+    sparklines[id] = new Chart(ctx, {
+      type: 'line',
+      data: { labels: [], datasets: [{ data: [], borderColor: color, borderWidth: 1.5, pointRadius: 0, tension: 0.4, fill: true, backgroundColor: color + '18' }] },
+      options: {
+        responsive: false, animation: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: { x: { display: false }, y: { display: false } }
+      }
+    });
+  }
+  initSparkline('spark-temp',  '#f59e42');
+  initSparkline('spark-hum',   '#4f8ef7');
+  initSparkline('spark-light', '#f5c542');
+
+  // ── Main chart ──
+  const ctx = document.getElementById('sensorChart').getContext('2d');
+  const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [
+        { label: 'Temp (°C)',    data: [], borderColor: '#f59e42', backgroundColor: 'rgba(245,158,66,0.07)', tension: 0.4, pointRadius: 0, borderWidth: 2 },
+        { label: 'Humidité (%)', data: [], borderColor: '#4f8ef7', backgroundColor: 'rgba(79,142,247,0.07)', tension: 0.4, pointRadius: 0, borderWidth: 2 },
+        { label: 'Lumière (%)',  data: [], borderColor: '#f5c542', backgroundColor: 'rgba(245,197,66,0.07)', tension: 0.4, pointRadius: 0, borderWidth: 2 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: { intersect: false, mode: 'index' },
+      plugins: {
+        legend: { labels: { color: '#5c6b85', font: { size: 11 }, boxWidth: 12, boxHeight: 2, usePointStyle: false } },
+        tooltip: { backgroundColor: '#131720', titleColor: '#e8edf5', bodyColor: '#5c6b85', borderColor: '#1e2740', borderWidth: 1 }
+      },
+      scales: {
+        x: { ticks: { color: '#5c6b85', maxTicksLimit: 8, font: { size: 10 } }, grid: { color: '#1a2030' } },
+        y: { ticks: { color: '#5c6b85', font: { size: 10 } }, grid: { color: '#1a2030' } }
+      }
+    }
+  });
+
+  // ── Fetch sensors ──
+  // Lit field1-4 (capteurs) en ignorant les entrées LED-only (field1 vide)
+  async function tsFetchSensorsDirect() {
+    const url = `https://api.thingspeak.com/channels/${TS_CHANNEL_ID}/feeds.json?api_key=${TS_READ_API_KEY}&results=60`;
+    const res  = await fetch(url);
+    const data = await res.json();
+    // Filtre : garde seulement les entrées qui ont field1 rempli (= entrées capteurs ESP32)
+    const feeds = (data.feeds || []).filter(f => f.field1 !== null && f.field1 !== undefined && f.field1 !== "");
+    if (feeds.length === 0) return null;
+    const last = feeds[feeds.length - 1];
+    return {
+      temperature: parseFloat(last.field1),
+      humidity:    parseFloat(last.field2),
+      presence:    last.field3 === "1",
+      light_level: parseInt(last.field4),
+      history: feeds.map(f => ({
+        timestamp:   f.created_at,
+        temperature: parseFloat(f.field1),
+        humidity:    parseFloat(f.field2),
+        light_level: parseInt(f.field4)
+      }))
+    };
+  }
+
+  function applySensorUI(latest, history) {
+    document.getElementById('val-temp').textContent  = isNaN(latest.temperature) ? '–' : latest.temperature.toFixed(1);
+    document.getElementById('val-hum').textContent   = isNaN(latest.humidity)    ? '–' : latest.humidity.toFixed(1);
+    document.getElementById('val-light').textContent = isNaN(latest.light_level) ? '–' : latest.light_level;
+    document.getElementById('val-pres').textContent  = latest.presence ? 'Oui' : 'Non';
+    const bars = document.querySelectorAll('#pres-bars div');
+    bars.forEach(b => b.style.background = latest.presence ? 'var(--green)' : 'var(--border)');
+    // Met à jour le cache capteurs → inclus dans le prochain envoi ThingSpeak LED
+    updateSensorCache(latest.temperature, latest.humidity, latest.presence, latest.light_level);
+    if (!history || history.length === 0) return;
+    const labels = history.map(r => new Date(r.timestamp).toLocaleTimeString('fr', {hour:'2-digit',minute:'2-digit',second:'2-digit'}));
+    chart.data.labels = labels;
+    chart.data.datasets[0].data = history.map(r => r.temperature);
+    chart.data.datasets[1].data = history.map(r => r.humidity);
+    chart.data.datasets[2].data = history.map(r => r.light_level);
+    chart.update();
+    const sp = history.slice(-15);
+    ['spark-temp','spark-hum','spark-light'].forEach((id, i) => {
+      const key = ['temperature','humidity','light_level'][i];
+      const s = sparklines[id];
+      s.data.labels = sp.map((_,j) => j);
+      s.data.datasets[0].data = sp.map(r => r[key]);
+      s.update();
+    });
+  }
+
+  async function fetchSensors() {
+    // 1) Essaie FastAPI
+    try {
+      const latest  = await fetch(`${SERVER}/sensors/latest`).then(r => r.json());
+      const history = await fetch(`${SERVER}/sensors/history?limit=50`).then(r => r.json());
+      applySensorUI(
+        { temperature: latest.temperature, humidity: latest.humidity, presence: latest.presence, light_level: latest.light_level },
+        history.reverse().map(r => ({ timestamp: r.timestamp, temperature: r.temperature, humidity: r.humidity, light_level: r.light_level }))
+      );
+      document.getElementById('connStatus').innerHTML = '<span class="dot"></span> Connecté au serveur';
+      document.getElementById('connStatus').style.color = 'var(--green)';
+      return;
+    } catch(_) {}
+
+    // 2) FastAPI inaccessible → ThingSpeak direct, en filtrant les entrées LED-only
+    try {
+      const ts = await tsFetchSensorsDirect();
+      if (ts) {
+        applySensorUI(ts, ts.history);
+        document.getElementById('connStatus').innerHTML = '<span class="dot" style="background:var(--yellow)"></span> ThingSpeak direct';
+        document.getElementById('connStatus').style.color = 'var(--yellow)';
+      }
+    } catch(e) {
+      document.getElementById('connStatus').textContent = '❌ Serveur inaccessible';
+      document.getElementById('connStatus').style.color = 'var(--danger)';
+    }
+  }
+
+  // ── Devices ──
+  const DEVICE_ICONS = {
+    light_salon: '💡', light_bedroom: '💡', light_kitchen: '💡',
+    ac_salon: '❄️', heater_bedroom: '🔥', blinds_salon: '🪟'
+  };
+  const DEVICE_NAMES = {
+    light_salon: 'Lumière salon', light_bedroom: 'Lumière chambre',
+    light_kitchen: 'Lumière cuisine', ac_salon: 'Climatiseur salon',
+    heater_bedroom: 'Chauffage chambre', blinds_salon: 'Volets salon'
+  };
+
+  // Construit le HTML de la liste avec les états donnés
+  function renderDeviceList(stateMap) {
+    const list = document.getElementById('deviceList');
+    const allIds = Object.keys(DEVICE_NAMES);
+    list.innerHTML = allIds.map(id => {
+      const isOn = stateMap[id] === true || stateMap[id] === 'on';
+      return `<div class="device-item ${isOn ? 'active' : ''}" id="dev-${id}">
+        <div class="device-left">
+          <div class="device-icon ${isOn ? 'on' : 'off'}">${DEVICE_ICONS[id]}</div>
+          <div>
+            <div class="device-name">${DEVICE_NAMES[id]}</div>
+            <div class="device-state">${isOn ? 'Activé' : 'Désactivé'}</div>
+          </div>
+        </div>
+        <button class="toggle ${isOn ? 'on' : ''}" onclick="toggleDevice('${id}','${isOn ? 'off' : 'on'}')"></button>
+      </div>`;
+    }).join('');
+  }
+
+  async function fetchDevices() {
+    // 1) Essaie FastAPI d'abord
+    try {
+      const devices = await fetch(`${SERVER}/commands/devices`).then(r => r.json());
+      const stateMap = {};
+      devices.forEach(d => stateMap[d.device_id] = d.state);
+
+      // Synchronise tsLedState avec FastAPI
+      if (stateMap.light_salon   !== undefined) tsLedState.light_salon   = stateMap.light_salon   === 'on';
+      if (stateMap.light_bedroom !== undefined) tsLedState.light_bedroom = stateMap.light_bedroom === 'on';
+      if (stateMap.light_kitchen !== undefined) tsLedState.light_kitchen = stateMap.light_kitchen === 'on';
+
+      renderDeviceList(stateMap);
+      return; // FastAPI OK → on s'arrête ici
+    } catch(_) {}
+
+    // 2) FastAPI inaccessible → fallback ThingSpeak pour les LEDs
+    const tsStates = await tsReadLeds();
+    if (tsStates) {
+      // Construit un stateMap mixte : LEDs depuis ThingSpeak, autres à "off"
+      const stateMap = {
+        light_salon:    tsStates.light_salon,
+        light_bedroom:  tsStates.light_bedroom,
+        light_kitchen:  tsStates.light_kitchen,
+        ac_salon:       false,
+        heater_bedroom: false,
+        blinds_salon:   false
+      };
+      // Met à jour tsLedState en mémoire
+      tsLedState.light_salon   = tsStates.light_salon;
+      tsLedState.light_bedroom = tsStates.light_bedroom;
+      tsLedState.light_kitchen = tsStates.light_kitchen;
+      renderDeviceList(stateMap);
+    }
+  }
+
+  async function toggleDevice(deviceId, targetState) {
+    const name = DEVICE_NAMES[deviceId];
+    const verb = targetState === 'on' ? 'Allume' : 'Éteins';
+
+    // Mise à jour optimiste immédiate de l'UI
+    tsLedState[deviceId] = (targetState === 'on');
+
+    // Pour les 3 LEDs → écrit dans ThingSpeak (ESP32 lira dans les 3s)
+    const ledIds = ['light_salon', 'light_bedroom', 'light_kitchen'];
+    if (ledIds.includes(deviceId)) {
+      await tsWriteLeds();
+    }
+
+    // Envoie aussi à FastAPI si disponible (pour le LLM + les autres devices)
+    addMsg('user', `${verb} ${name.toLowerCase()}`);
+    await callLLM(`${verb} ${name.toLowerCase()}`);
+    fetchDevices();
+  }
+
+  // ── Analysis ──
+  async function fetchAnalysis() {
+    const box = document.getElementById('analysisContent');
+    try {
+      const res = await fetch(`${SERVER}/analysis/consumption?results=20&_t=${Date.now()}`, { cache: 'no-store' });
+      const data = await res.json();
+      if (data.message) {
+        box.innerHTML = `<div style="color:var(--muted);font-size:0.82rem;">${data.message}</div>`;
+        return;
+      }
+      const now = new Date().toLocaleTimeString('fr', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      const temp  = data.current_temperature  ?? data.average_temperature;
+      const hum   = data.current_humidity     ?? data.average_humidity;
+      const light = data.current_light_level  ?? data.average_light_level;
+      const pres  = data.current_presence     ?? (data.presence_rate_percent > 0);
+      box.innerHTML = `
+        <div style="font-size:0.66rem;color:var(--muted);margin-bottom:0.6rem;">⏱ Mis à jour à ${now}</div>
+        <div style="font-size:0.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.35rem;">Valeurs actuelles</div>
+        <div class="analysis-grid" style="margin-bottom:0.6rem;">
+          <div class="analysis-stat"><div class="analysis-stat-label">🌡 Température</div><div class="analysis-stat-value" style="color:var(--warn)">${temp}°C</div></div>
+          <div class="analysis-stat"><div class="analysis-stat-label">💧 Humidité</div><div class="analysis-stat-value" style="color:var(--accent)">${hum}%</div></div>
+          <div class="analysis-stat"><div class="analysis-stat-label">💡 Lumière</div><div class="analysis-stat-value" style="color:var(--yellow)">${light}%</div></div>
+          <div class="analysis-stat"><div class="analysis-stat-label">👤 Présence</div><div class="analysis-stat-value" style="color:var(--green)">${pres ? '✅ Oui' : '❌ Non'}</div></div>
+        </div>
+        <div style="font-size:0.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.35rem;">Moyennes (${data.total_records} mesures)</div>
+        <div class="analysis-grid">
+          <div class="analysis-stat"><div class="analysis-stat-label">🌡 Moy. temp.</div><div class="analysis-stat-value">${data.average_temperature}°C</div></div>
+          <div class="analysis-stat"><div class="analysis-stat-label">💧 Moy. humid.</div><div class="analysis-stat-value">${data.average_humidity}%</div></div>
+          <div class="analysis-stat"><div class="analysis-stat-label">💡 Moy. lumière</div><div class="analysis-stat-value">${data.average_light_level}%</div></div>
+          <div class="analysis-stat"><div class="analysis-stat-label">👤 Taux présence</div><div class="analysis-stat-value">${data.presence_rate_percent}%</div></div>
+        </div>
+        <div class="insight-box" style="margin-top:0.6rem;">
+          <span class="insight-icon">🧠</span>
+          <span>${data.insight}</span>
+        </div>`;
+    } catch(e) {
+      box.innerHTML = '<div style="color:var(--danger);font-size:0.82rem;">❌ Impossible de charger l\'analyse</div>';
+    }
+  }
+
+  // ── Chat LLM ──
+  async function callLLM(instruction) {
+    try {
+      const res = await fetch(`${SERVER}/commands/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instruction })
+      });
+      const data = await res.json();
+      addMsg('bot', res.ok ? `✅ ${data.explanation}` : `❌ ${data.detail || 'Erreur serveur'}`, !res.ok);
+    } catch(e) {
+      addMsg('bot', '❌ Impossible de joindre le serveur.', true);
+    }
+  }
+
+  async function sendCommand() {
+    const input = document.getElementById('chatInput');
+    const instruction = input.value.trim();
+    if (!instruction) return;
+    input.value = '';
+    document.getElementById('btnSend').disabled = true;
+    addMsg('user', instruction);
+    await callLLM(instruction);
+    document.getElementById('btnSend').disabled = false;
+    fetchDevices();
+  }
+
+  // ── Init ──
+  function fetchAll() { fetchSensors(); fetchDevices(); fetchAnalysis(); }
+  renderChatHistory();
+  fetchAll();
+  setInterval(fetchSensors,  5000);
+  setInterval(fetchDevices,  5000);
+  setInterval(fetchAnalysis, 20000);
+</script>
+</body>
+</html>
