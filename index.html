@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+   <link rel="stylesheet" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSiRIInnDH8g2AjsvSdLljSFtbJCebvsS5Oggc-QS7SOocHRHQ0HoRd5pvb&s=10">
   <title>Domotique Intelligente</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
@@ -718,10 +719,7 @@
 // ── Config ──
 const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
-let SERVER = localStorage.getItem('domServer') || 
-             (isLocalhost 
-               ? 'http://localhost:8000'
-               : 'https://backen-smart-house.onrender.com');
+let SERVER = 'https://backen-smart-house.onrender.com';
 
 document.getElementById('serverUrl').value = SERVER;
 
