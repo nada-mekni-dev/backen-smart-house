@@ -458,7 +458,7 @@
     <div class="header-right">
       <div class="server-bar">
         ⚙️
-        <input id="serverUrl" type="text" value="https://vascular-goon-fool.ngrok-free.dev" placeholder="URL du serveur FastAPI" />
+        <input id="serverUrl" type="text" value="https://backen-smart-house.onrender.com" placeholder="URL du serveur FastAPI" />
         <button class="btn-connect" onclick="saveServer()">Connecter</button>
       </div>
       <div class="theme-toggle-wrap">
@@ -721,7 +721,7 @@ const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname
 let SERVER = localStorage.getItem('domServer') || 
              (isLocalhost 
                ? 'http://localhost:8000'
-               : 'https://vascular-goon-fool.ngrok-free.dev');
+               : 'https://backen-smart-house.onrender.com');
 
 document.getElementById('serverUrl').value = SERVER;
 
