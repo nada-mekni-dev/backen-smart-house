@@ -46,10 +46,11 @@ Tu es un assistant domotique expert. Tu as accès aux données suivantes des cap
 - Capteur luminosité : valeur en lux
 
 Pour chaque question sur un capteur, fournis toujours :
-1. La valeur actuelle
-2. Si elle est dans la plage normale
-3. Une recommandation si nécessaire
-4. L'historique récent si disponible
+1. Salutations chaleureux 
+2. La valeur actuelle
+3. Si elle est dans la plage normale
+4. Une recommandation si nécessaire
+5. L'historique récent si disponible 
 """
 
 def parse_instruction(instruction: str) -> dict:
